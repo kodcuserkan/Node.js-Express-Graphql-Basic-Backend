@@ -2,7 +2,8 @@ const express = require('express');
 const { buildSchema } = require('graphql');
 const { graphqlHTTP } = require('express-graphql');
 
-const films = require('./data.json');
+const MOCKED_DATA = require('./data.json');
+const { findWord } = require('./utils');
 
 const PORT = process.env.PORT || 4000;
 
@@ -12,7 +13,11 @@ const schema = buildSchema(`
     film(id: String!): Film
     films(Genre: String!): [Film]
   }
+  type Mutation {
+    updateFilmTitle(id: String!, title: String!): Film
+  }
   type Film {
+    id: String
     Title: String
     Year: String
     Rated: String
@@ -40,7 +45,7 @@ const schema = buildSchema(`
 //Gets specific film by id
 const getFilm = ({id}) => {
   return new Promise((resolve, reject) => {
-    const film = films.find(film => film.id === id);
+    const film = MOCKED_DATA.find(film => film.id === id);
     if (film) {
       resolve(film);
     } else {
@@ -50,22 +55,35 @@ const getFilm = ({id}) => {
 }
 
 //Gets films by genre
-const getFilms = ({genre}) => {
+const getFilmsByGenre = ({Genre}) => {
   return new Promise((resolve, reject) => {
-    const films = films.filter(film => film.Genre === genre);
-    if (films) {
+    const films = MOCKED_DATA.filter(film => findWord(film.Genre, Genre));
+    if (films.length > 0) {
       resolve(films);
     } else {
-      reject(`Films with genre ${genre} not found`);
+      reject(`Films with genre ${Genre} not found`);
     }
   });
 }
 
+// Updates film title
+const updateFilmTitle = ({id, title}) => {
+  return new Promise((resolve, reject) => {
+    const film = MOCKED_DATA.find(film => film.id === id);
+    if (film) {
+      film.Title = title;
+      resolve(film);
+    } else {
+      reject(`Film with id ${id} not found`);
+    }
+  });
+}
 
 // The root provides a resolver function for each field in the schema.
 const root = {
   film: getFilm,
-  films: getFilms
+  films: getFilmsByGenre,
+  updateFilmTitle
 }
 
 // Create an express server and a GraphQL endpoint
